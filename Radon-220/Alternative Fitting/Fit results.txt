@@ -1,0 +1,22 @@
+Series 1:
+Avg Background: 10.1 ± 2.4
+lamda = 0.0120497 ± 0.00027
+N0 = 599.4 ± 23
+chi2=1.8507579657267046
+Half-time: 57.5 ± 1.3
+
+Series 2:
+Avg Background: 19 ± 3.4
+lamda = 0.012627 ± 0.00025
+N0 = 642.5 ± 21
+chi2=1.1030366788333084
+Half-time: 54.9 ± 1.1
+
+Series 3:
+Avg Background: 27.7 ± 9.5
+lamda = 0.014868 ± 0.00032
+N0 = 741 ± 28
+chi2=1.0294869452980584
+Half-time: 46.6 ± 1
+
+Average Half-time: 53 ± 1.1
