@@ -45,9 +45,3 @@ print(f"{e_g=} \n{N_true=}")
 # Sr --> Y --> Zr, n=2
 e_i_avg = avg_counts / (2 * e_g * N_true)
 print(f"{e_i_avg=}")
-
-# For our particular detector (1007)
-bg_007 = floatE(df.at[0, 'background'], np.sqrt(df.at[0, 'background']))
-count_007 = floatE(df.at[0, 'counts'], df.at[0, 'sigma']) - bg_007
-e_i_007 = count_007 / (2 * e_g * N_true)
-print(f"{e_i_007=}")
