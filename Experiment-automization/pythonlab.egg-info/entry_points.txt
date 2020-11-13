@@ -1,0 +1,3 @@
+[console_scripts]
+test_app = ch4.smallangle:approx
+
