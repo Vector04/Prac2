@@ -1,0 +1,4 @@
+[console_scripts]
+diode = pythonlab.views.views:cli
+test_app = ch4.smallangle:cli
+
