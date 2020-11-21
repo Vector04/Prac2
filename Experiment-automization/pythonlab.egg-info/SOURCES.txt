@@ -13,4 +13,5 @@ pythonlab/controllers/arduino_device.py
 pythonlab/models/__init__.py
 pythonlab/models/models.py
 pythonlab/views/__init__.py
+pythonlab/views/helpers.py
 pythonlab/views/views.py
