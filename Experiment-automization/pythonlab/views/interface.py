@@ -1,9 +1,10 @@
 import sys
+import threading
 
 import numpy as np
 import pandas as pd
 import pkg_resources
-from PyQt5 import QtWidgets, uic
+from PyQt5 import QtWidgets, uic, QtCore
 import pyqtgraph as pg
 import click
 
@@ -53,6 +54,13 @@ class UserInterface(QtWidgets.QMainWindow):
         self.browsebutton.clicked.connect(self.file_select)
         self.savebutton.clicked.connect(self.save_data)
 
+
+        # Threaded plotting
+        self.xs, self.ys = [], []
+        self.plot_timer = QtCore.QTimer()
+        self.plot_timer.timeout.connect(lambda: self._plot(pen={"color": "g","width": 3}))
+        self.plot_timer.start(100)
+            
     def set_device(self):
         """Sets default resource (port), displays it"""
         self.resource = self.resource_select.currentText()
@@ -99,28 +107,36 @@ class UserInterface(QtWidgets.QMainWindow):
         else:
             return
 
-        self.plotwidget.clear()
-
         start = self.startslider.value() / 100
         end = self.endslider.value() / 100
         numpoints = self.numpointsslider.value()
         args = (start, end, numpoints)
+        kwargs = {"pen": {"color": "g","width": 3}}
+
+        self.xs, self.ys = [], []
 
         if self.debug:
             print(args)
         
-        # Getting data
-        self.v_ins = np.linspace(*args)
-        self.v_outs = [v for v in DE.get_voltages(*args, port=self.resource)]
-
-        if self.debug:
-            print(self.v_ins)
-            print(self.v_outs)
-
-        self.plotwidget.plot(self.v_ins, self.v_outs, pen={"color": "g","width": 3})
+        # Getting data, starting a thread
+        self.xs = np.linspace(*args)
+        self.get_data_thread = threading.Thread(target=self._get_data, args=args, kwargs={"port": self.resource})
+        self.get_data_thread.start()
 
         # Function finished
+        self.plot_timer.stop()
         self.measuring = False
+
+    def _plot(self, **kwargs):
+        print("_plot() activated!")
+        self.plotwidget.clear()
+        self.plotwidget.plot(self.xs[:len(self.ys)], self.ys, **kwargs)
+
+    def _get_data(self, *args, **kwargs):
+        """Adds new measured data to self.ys, in realtime."""
+        for V_out in DE.get_voltages(*args, **kwargs):
+            self.ys.append(V_out)
+            print(f"New datapoint {V_out} added!")
 
 
 # Click command        
@@ -132,7 +148,7 @@ def cli():
 @cli.command()
 def run():
     app = QtWidgets.QApplication(sys.argv)
-    ui = UserInterface(debug=False)
+    ui = UserInterface(debug=True)
     ui.show()
     sys.exit(app.exec())
 

@@ -3,6 +3,7 @@
 from pythonlab.controllers.arduino_device import ArduinoVISADevice
 import numpy as np 
 import time
+import random
 
 # Note: The use of classes here is redundant in my opinion, as all the methods defined here need to function independently anyway. It is for this reason that all we only have classmethods here.
 
