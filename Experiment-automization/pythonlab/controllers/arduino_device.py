@@ -24,7 +24,7 @@ class ArduinoVISADevice:
             port = self.rm.list_resources()[-1]
             # print(self.rm.list_resources())
         self.device = self.rm.open_resource(
-            port, read_termination="\r\n", write_termination="\n")
+            port, read_termination="\r\n", write_termination="\n", timeout=100)
 
     def query(self, query):
         """Can directly any command, should this be neccesary."""

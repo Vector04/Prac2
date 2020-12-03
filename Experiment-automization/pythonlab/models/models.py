@@ -2,6 +2,7 @@
 
 from pythonlab.controllers.arduino_device import ArduinoVISADevice
 import numpy as np 
+import time
 
 # Note: The use of classes here is redundant in my opinion, as all the methods defined here need to function independently anyway. It is for this reason that all we only have classmethods here.
 
@@ -23,13 +24,13 @@ class DiodeExperiment:
         try:
             device = ArduinoVISADevice(port)
         except Exception as e:
-            return  
+            return
         return device.get_hardware_info()
 
     @classmethod
-    def get_current(cls, input_voltage, n):
+    def get_current(cls, input_voltage, n, **kwargs):
         """Returns the measured current through the diode, with specified `input_voltage' applied. The current is measured `n' times."""
-        device = ArduinoVISADevice()
+        device = ArduinoVISADevice(**kwargs)
         voltages = []
         for _ in range(n):
             # The pythonlab.controllers does all the real work here, really.
@@ -48,12 +49,16 @@ class DiodeExperiment:
         return v_mean / 220, v_std / 220
 
     @classmethod
-    def get_voltages(cls, v_min, v_max, n):
+    def get_voltages(cls, v_min, v_max, n, **kwargs):
         """Measures the voltage across the resistor when the input voltages is varied between `v_min' and `v_max', measurese at `n' different input voltages."""
-        device = ArduinoVISADevice()
+        device = ArduinoVISADevice(**kwargs)
         voltages = []
         for voltage in np.linspace(v_min, v_max, num=n):
             device.set_output_voltage(voltage=voltage)
+            time.sleep(0.1)
             # Once again, a generator symplifies the code in pythonlab.views
             yield device.measure_input_voltage(channel=2)
         device.set_output_voltage(voltage=0)
+
+
+    

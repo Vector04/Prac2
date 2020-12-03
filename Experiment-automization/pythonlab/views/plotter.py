@@ -82,7 +82,7 @@ class UserInterface(QtWidgets.QMainWindow):
         self.plotwidget.clear()
         if not self.syntaxerror:
             self.plotwidget.plot(xs, ys, pen={"color": "g","width": 3})
-        elif debug:
+        elif self.debug:
             print(self.exception)
 
 if __name__ == "__main__":
