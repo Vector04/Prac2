@@ -6,6 +6,9 @@ from scipy import optimize
 from uncertainties import ufloat, unumpy
 
 
+# Same as dracht.py, now fitting with eff. fixed to the first counts/mass datapoint
+
+
 df = pd.read_csv('data.csv')
 print(df)
 
@@ -13,11 +16,15 @@ print(df)
 masses = unumpy.uarray(df.iloc[1:, 0].to_numpy(), 0.004)
 counts = unumpy.uarray(df.iloc[1:, 1] - 159,
                        np.sqrt(df.iloc[1:, 1]) + np.sqrt(159))
-counts_per_m = counts / masses
-print(counts_per_m)
+
+Eff0 = df.iloc[1,1] / df.iloc[1, 0]
+print(df.iloc[1,1])
+print(df.iloc[1,0])
+print(Eff0)
+print(df['counts'] / df['carbonate_mass'])
 
 
-def p(d, Eff, a):
+def p(d, a):
     return Eff * (1 - np.exp(-a * d)) / (a * d)
 
 

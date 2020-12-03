@@ -20,6 +20,7 @@ stdmean = std / np.sqrt(6)
 meanstd = np.mean(df['sigma'])
 
 print(f"{mean=} \n{std=} \n{stdmean=} \n{meanstd=} \n")
+
 # Note: the spread of counts (std) is greater than the poisson-predicted spread. (2 sigma)
 # Attaching some numbers to this claim:
 z = std / meanstd  # amount of sigma difference
@@ -41,7 +42,15 @@ e_g = (floatE(30, 1) / (floatE(150, 1) * 2))**2 / 4
 N_true = floatE(1400,1) * floatE(480, 1)
 print(f"{e_g=} \n{N_true=}")
 
+
 # We know that counts = n e_g e_i N_true <==> e_i = counts / (n e_g N_true)
 # Sr --> Y --> Zr, n=2
 e_i_avg = avg_counts / (2 * e_g * N_true)
 print(f"{e_i_avg=}")
+
+# print(df[['GM number', 'counts', 'background']].to_csv(
+#       sep='&', line_terminator=r' \\' + '\n').replace('&', ' & '))
+
+
+print()
+print(N_true.LaTeXify())
