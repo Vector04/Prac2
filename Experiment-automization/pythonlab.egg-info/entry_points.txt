@@ -1,3 +1,5 @@
 [console_scripts]
-test_app = ch4.smallangle:approx
+diode = pythonlab.views.views:cli
+interface = pythonlab.views.interface:cli
+test_app = ch4.smallangle:cli
 

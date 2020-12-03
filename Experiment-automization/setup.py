@@ -5,5 +5,7 @@ setup(
     author="V.N. Vreede",
     version="0.1",
     packages=find_packages(),
-    entry_points={"console_scripts": ["test_app = ch4.smallangle:approx"]},
+    entry_points={"console_scripts": ["test_app = ch4.smallangle:cli",
+                                      "diode = pythonlab.views.views:cli", "interface = pythonlab.views.interface:cli"]},
+    package_data={"pythonlab.views":["plotter.ui"]}
 )

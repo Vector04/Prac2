@@ -24,7 +24,7 @@ class ArduinoVISADevice:
             port = self.rm.list_resources()[-1]
             # print(self.rm.list_resources())
         self.device = self.rm.open_resource(
-            port, read_termination="\r\n", write_termination="\n")
+            port, read_termination="\r\n", write_termination="\n", timeout=100)
 
     def query(self, query):
         """Can directly any command, should this be neccesary."""
@@ -57,3 +57,8 @@ class ArduinoVISADevice:
     def measure_input_voltage(self, channel=1):
         """Returns the measured voltage (Between 0 and 3.3 V) of the channel specified."""
         return float(self.device.query(f"MEAS:CH{channel}:VOLT?"))
+
+    @classmethod
+    def get_resources(cls):
+        cls.rm = pyvisa.ResourceManager("@py")
+        return cls.rm.list_resources() 
