@@ -16,7 +16,13 @@ pg.setConfigOption("foreground", "k")
 
 class UserInterface(QtWidgets.QMainWindow):
     def __init__(self, debug=False):
-        """Creates a UserInterface() instance, enables interactive functionality of ui."""
+        """Creates a UserInterface() instance, enables interactive functionality of
+         ui.
+        Arguments:
+            debug=False, whether to enable extra printing for debugging purposes.
+            defaults to False.
+        
+         """
 
         super().__init__()
         self.debug = debug
@@ -67,13 +73,17 @@ class UserInterface(QtWidgets.QMainWindow):
         self.selected_device_line_edit.setText(self.resource)
 
     def get_identification(self):
-        """Gets the identification string of device, and displays it."""
+        """Gets the identification string of device, and displays it in the gui
+        This method is activated when pressing the `get Identification' button.
+        The device is being fetched from the resources_select combobox, and the indentification string is displayed in identification_line_edit.
+            [No arguments]
+        """
         self.identification_line_edit.setText('')
         resource = self.resource_select.currentText()
         if self.debug:
             print(resource)
 
-        # Unfortunately, this is very slow
+        # Unfortunately, this can be very slow
         info = DE.get_info(resource)
         if self.debug:
             print(info)
@@ -84,7 +94,9 @@ class UserInterface(QtWidgets.QMainWindow):
             self.identification_line_edit.setText("Not Found!")
 
     def file_select(self):
-        """Opens File Dialog box to select file. Displays path/to/file as well."""
+        """Opens File Dialog box to select file. Displays path/to/file as well in the filename_line_edit.
+            [No arguments]
+        """
         self.filename, _ = QtWidgets.QFileDialog.getSaveFileName(filter="CSV files(*.csv)")
         self.filename_line_edit.setText(self.filename)
         if self.debug:
