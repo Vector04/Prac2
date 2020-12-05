@@ -1,6 +1,7 @@
 """Some miscelaneous helper functions."""
 import numpy as np
 
+
 def power(x):
     """Returns superscripted versions of input string x."""
     superscipt_dict = {
@@ -14,10 +15,11 @@ def power(x):
             power_string += "⁻"
     return power_string
 
+
 def formatter(val, error):
     """Returns a formatted version to represent val ± error with the correct significance.
     """
-    # It may have been neater to create a floatE object as defined in data_analysis_tools.py, but the current solution increases compatibility. 
+    # It may have been neater to create a floatE object as defined in data_analysis_tools.py, but the current solution increases compatibility.
 
     # Handling some special cases
     if error == 0:
