@@ -1,11 +1,12 @@
 """Contains function evoked by pythonlab.views, computes results by evoking pythonlab.controllers."""
 
 from pythonlab.controllers.arduino_device import ArduinoVISADevice
-import numpy as np 
+import numpy as np
 import time
 import random
 
 # Note: The use of classes here is redundant in my opinion, as all the methods defined here need to function independently anyway. It is for this reason that all we only have classmethods here.
+
 
 class DiodeExperiment:
     @classmethod
@@ -24,9 +25,9 @@ class DiodeExperiment:
         # Exception handling if no connection can be made to the device.
         try:
             device = ArduinoVISADevice(port)
-        except Exception as e:
+            return device.get_hardware_info()
+        except:
             return
-        return device.get_hardware_info()
 
     @classmethod
     def get_current(cls, input_voltage, n, **kwargs):
@@ -39,10 +40,10 @@ class DiodeExperiment:
             voltages.append(device.measure_input_voltage(channel=2))
 
         device.set_output_voltage(voltage=0)
-        v_mean = np.mean(voltages) 
+        v_mean = np.mean(voltages)
 
-        # The std dev can be the std dev of all the measurements, or the 
-        # measurement resolution of the arduino. To play it save, we use the 
+        # The std dev can be the std dev of all the measurements, or the
+        # measurement resolution of the arduino. To play it save, we use the
         # largest, and apply the sqrt n rule
         v_std = max(np.std(voltages), 0.0033) / np.sqrt(n)
 
@@ -60,6 +61,3 @@ class DiodeExperiment:
             # Once again, a generator symplifies the code in pythonlab.views
             yield device.measure_input_voltage(channel=2)
         device.set_output_voltage(voltage=0)
-
-
-    
