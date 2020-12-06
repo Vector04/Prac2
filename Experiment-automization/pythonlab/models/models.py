@@ -54,7 +54,6 @@ class DiodeExperiment:
     def get_voltages(cls, v_min, v_max, n, **kwargs):
         """Measures the voltage across the resistor when the input voltages is varied between `v_min' and `v_max', measurese at `n' different input voltages."""
         device = ArduinoVISADevice(**kwargs)
-        voltages = []
         for voltage in np.linspace(v_min, v_max, num=n):
             device.set_output_voltage(voltage=voltage)
             time.sleep(0.1)

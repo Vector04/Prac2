@@ -51,10 +51,7 @@ class UserInterface(QtWidgets.QMainWindow):
                 f"{self.numpointsslider.value()} "))
 
         # Main plotting function
-        self.measure_button.clicked.connect(self.start_measurement)
-        self.plot_timer = QtCore.QTimer()
-        self.is_plotting = False
-        self.plotting_options = {"pen": {"color": "g","width": 3}}
+        self.measure_button.clicked.connect(self.plot_measurements)
 
         # Plot labels
         self.plotwidget.setLabel("left", "V out (V)")
@@ -63,6 +60,18 @@ class UserInterface(QtWidgets.QMainWindow):
         # Saving mechanism
         self.browsebutton.clicked.connect(self.file_select)
         self.savebutton.clicked.connect(self.save_data)
+
+        # Threaded plotting
+        self.xs, self.ys = [], []
+        self.plot_timer = QtCore.QTimer()
+        self.plot_timer.timeout.connect(
+            lambda: self._plot(pen={"color": "g","width": 3}))
+        self.plot_timer.start(100)
+        # if event_flag = False ==> plotting is happening
+        # if event_flag = True ==> device is free to use
+        self.plot_event = threading.Event()
+        self.plot_event.set()
+        self.is_plotting = False
 
     def set_device(self):
         """Sets default resource (port), displays it"""
@@ -101,7 +110,6 @@ class UserInterface(QtWidgets.QMainWindow):
         try:
             df = pd.DataFrame({"v_in": self.xs, "v_out": self.ys})
         except AttributeError:
-            # There is no data to be saved
             if self.debug:
                 print("Tried to save, but no data!")
             return
@@ -109,102 +117,75 @@ class UserInterface(QtWidgets.QMainWindow):
             try:
                 df.to_csv(self.filename, index=False)
             except AttributeError:
-                # self.filename is not defined, ask again
                 if self.debug:
                     print("No filename found, promting FileDialog!")
                 if self.file_select():
                     self.save_data()
             else:
-                # Give user feedback that data was saved succesfully
-                self.savebutton.setStyleSheet("background-color: #76fa34")
                 if self.debug:
                     print("Save succesful!")
 
-    def start_measurement(self):
+    def plot_measurements(self):
         """Evokes pythonlab.models module to measure data over specified range, plots data was well. Has spam protection."""
-
-        # Simple spam protection
-        if self.is_plotting:
+        print(f"plot_measurements() activated!")
+        print(f"{self.plot_event.is_set() = }, {self.is_plotting = }")
+        if not self.plot_event.is_set():
+            print("aborting plot_measurements()")
             return
+        self.plot_event.clear()
         self.is_plotting = True
 
-        # Getting plot parameters from sliders
+        self.measure_button.setEnabled(False)
+        self.plot_timer.start(100)
+
         start = self.startslider.value() / 100
         end = self.endslider.value() / 100
         numpoints = self.numpointsslider.value()
         args = (start, end, numpoints)
-        # Simplifies plotting function
-        self.xs = np.linspace(*args)
-        # Copy of data, useful when saving data
-        self.ys = []
 
-        self.measure_button.setEnabled(False)
-        # reset save button color if there was a succesful save previously
-        self.savebutton.setStyleSheet("")
-        self.plot_timer.start(100)
+        self.xs, self.ys = [], []
 
         if self.debug:
             print(args)
 
-        # Note: This was where I had trouble with threading, I implementen a better and more elegant solution.
-        # Instantiating data collection thread
-        self.data_thread = DataCollectionThread(*args, port=self.resource)
+        # Getting data, starting a thread
+        self.xs = np.linspace(*args)
+        self.get_data_thread = threading.Thread(
+            target=self._get_data, args=args, kwargs={"port": self.resource})
+        print("Thread Created!")
+        self.get_data_thread.start()
+        print("Thread Started!")
 
-        # Connecting signals, now the _plot() function only activates if there is new data
-        self.data_thread.ys_signal.connect(self._plot)
-        self.data_thread.ys_signal.connect(self.copy_ys)
-        self.data_thread.finished.connect(self.end_measurement)
-
-        self.data_thread.start()
-
-    def end_measurement(self):
-        """Activates miscellaneous functions to properly finish the measurement."""
+        # The following code needs to be exectud after the thread finishes.
+        event_finished = self.plot_event.wait()
+        print(f"{event_finished = }")
+        # self.plot_timer.stop()
         self.measure_button.setEnabled(True)
-        self.plot_timer.stop()
         self.is_plotting = False
 
-    def _plot(self, ys):
-        """Plots the given data on plotwidget instance.
-        Arguments:
-            `ys': list, the data to plot. 
-        """
+    def _plot(self, **kwargs):
+        print("_plot activated!")
         self.plotwidget.clear()
-        self.plotwidget.plot(self.xs[:len(ys)], ys, **self.plotting_options)
+        self.plotwidget.plot(self.xs[:len(self.ys)], self.ys, **kwargs)
 
-    def copy_ys(self, ys):
-        """Copies data from DatacollectionThread to Userinterface.ys attribute.
-        Arguments:
-            `ys': list, the data to be copied. 
-        """
-        self.ys = ys
-
-
-class DataCollectionThread(QtCore.QThread):
-    ys_signal = QtCore.pyqtSignal(list)
-
-    def __init__(self, *args, **kwargs):
-        QtCore.QThread.__init__(self)
-        self.args = args
-        self.kwargs = kwargs
-        self.ys = []
-
-    def __del__(self):
-        self.wait()
-
-    def run(self):
-        for V_out in DE.get_voltages(*self.args, **self.kwargs):
+    def _get_data(self, *args, **kwargs):
+        """Adds new measured data to self.ys, in realtime."""
+        for V_out in DE.get_voltages(*args, **kwargs):
             self.ys.append(V_out)
-            self.ys_signal.emit(self.ys)
+            if self.debug:
+                print(f"New datapoint [{V_out}] added!")
+        self.plot_event.set()
+
 
 # Click command
 
 
-@ click.group()
+@click.group()
 def cli():
     pass
 
 
-@ cli.command()
+@cli.command()
 def run():
     app = QtWidgets.QApplication(sys.argv)
     ui = UserInterface(debug=True)
