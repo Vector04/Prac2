@@ -7,6 +7,7 @@ import pkg_resources
 from PyQt5 import QtWidgets, uic, QtCore
 import pyqtgraph as pg
 import click
+import serial
 
 from pythonlab.models.models import DiodeExperiment as DE
 
@@ -149,6 +150,7 @@ class UserInterface(QtWidgets.QMainWindow):
         self.ys = []
 
         self.measure_button.setEnabled(False)
+        self.plotwidget.clear()
         # reset save button color if there was a succesful save previously
         self.savebutton.setStyleSheet("")
         self.plot_timer.start(100)
@@ -212,12 +214,14 @@ class DataCollectionThread(QtCore.QThread):
         self.wait()
 
     def run(self):
-        for V_out in DE.get_voltages(*self.args, **self.kwargs):
-            self.ys.append(V_out)
-            self.dys.append(0.0033)
-            self.ys_signal.emit(self.ys, self.dys)
-            logging.debug(f"New datapoint [{V_out}] added.")
-
+        try:
+            for V_out in DE.get_voltages(*self.args, **self.kwargs):
+                self.ys.append(V_out)
+                self.dys.append(0.0033)
+                self.ys_signal.emit(self.ys, self.dys)
+                logging.debug(f"New datapoint [{V_out}] added.")
+        except serial.serialutil.SerialException:
+            logging.error(f"Cannot measure any data on port {self.kwargs['port']}.")
 
 @click.group()
 def cli():
@@ -225,7 +229,7 @@ def cli():
 
 
 @cli.command()
-@click.option("-log", default='info', type=str, help="The logging level.")
+@click.option("--log", default='warning', type=str, help="The logging level.")
 def run(log='debug'):
     """Runs the application. 
     Option `log' represents the logging level. It can be left blank, or set to one of the following:
