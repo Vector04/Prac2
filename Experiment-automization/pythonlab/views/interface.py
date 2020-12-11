@@ -229,7 +229,7 @@ def cli():
 def run(log='debug'):
     """Runs the application. 
     Option `log' represents the logging level. It can be left blank, or set to one of the following:
-    debug, info, warning, error, critical.
+    debug, info, warning, error, critical. 
      """
     logging.basicConfig(level=getattr(logging, log.upper()))
     app = QtWidgets.QApplication(sys.argv)

@@ -8,9 +8,10 @@ import pkg_resources
 pg.setConfigOption("background", "w")
 pg.setConfigOption("foreground", "k")
 
+
 def inverse(x):
     try:
-        return 1/x
+        return 1 / x
     except ZeroDivisionError:
         return 0
 
@@ -22,9 +23,9 @@ class UserInterface(QtWidgets.QMainWindow):
         # Load ui
         # uic.loadUi(open("plotter.ui"), self)
 
-        uic.loadUi(pkg_resources.resource_stream("pythonlab.views", "plotter.ui"), self)
+        uic.loadUi(pkg_resources.resource_stream(
+            "pythonlab.views", "plotter.ui"), self)
 
-        
         # Sliders
         self.startslider.valueChanged.connect(self.update_plot)
         self.endslider.valueChanged.connect(self.update_plot)
@@ -39,51 +40,46 @@ class UserInterface(QtWidgets.QMainWindow):
         # Function editor
         self.funcedit.returnPressed.connect(self.update_plot)
 
-
         xs = np.linspace(-np.pi, np.pi, 50)
         self.plotwidget.plot(xs, np.sin(xs), pen={"color": "g","width": 3})
 
         self.plotwidget.setLabel("left", "f(x)")
         self.plotwidget.setLabel("bottom", "x")
 
-
-       
     def update_plot(self):
         # New plot data
         start = self.startslider.value()
         end = self.endslider.value()
         numpoints = self.numpointsslider.value()
         func = self.funcedit.text()
-        
+
         if self.debug:
             print(start, end, numpoints, func)
-
 
         xs = np.linspace(start, end, numpoints)
 
         self.syntaxerror = False
 
-
         def f(x):
             try:
-                result = eval(func, {'__builtins__': None}, {"x": x, 'sin':np.sin, 'cos':np.cos, 'tan':np.tan, 'exp':np.exp})
+                result = eval(func, {'__builtins__': None}, {
+                              "x": x, 'sin':np.sin, 'cos':np.cos, 'tan':np.tan, 'exp':np.exp})
                 if str(result) == 'inf':
                     return 0
                 return result
             except Exception as e:
                 self.exception = e
                 self.syntaxerror = True
-                return 
-
-
+                return
 
         ys = [f(x) for x in xs]
-        
+
         self.plotwidget.clear()
         if not self.syntaxerror:
             self.plotwidget.plot(xs, ys, pen={"color": "g","width": 3})
         elif debug:
             print(self.exception)
+
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
