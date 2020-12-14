@@ -47,10 +47,3 @@ print(f"{e_g=} \n{N_true=}")
 # Sr --> Y --> Zr, n=2
 e_i_avg = avg_counts / (2 * e_g * N_true)
 print(f"{e_i_avg=}")
-
-# print(df[['GM number', 'counts', 'background']].to_csv(
-#       sep='&', line_terminator=r' \\' + '\n').replace('&', ' & '))
-
-
-print()
-print(N_true.LaTeXify())
