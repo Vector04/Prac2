@@ -10,6 +10,7 @@ pythonlab.egg-info/entry_points.txt
 pythonlab.egg-info/top_level.txt
 pythonlab/controllers/__init__.py
 pythonlab/controllers/arduino_device.py
+pythonlab/controllers/prerecorded_device.py
 pythonlab/models/__init__.py
 pythonlab/models/models.py
 pythonlab/views/__init__.py

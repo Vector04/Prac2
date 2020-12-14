@@ -1,9 +1,11 @@
 """Contains function evoked by pythonlab.views, computes results by evoking pythonlab.controllers."""
 
 from pythonlab.controllers.arduino_device import ArduinoVISADevice
+from pythonlab.controllers.prerecorded_device import PreRecordedDevice
 import numpy as np
 import time
 import random
+from uncertainties import ufloat, unumpy
 
 # Note: The use of classes here is redundant in my opinion, as all the methods defined here need to function independently anyway. It is for this reason that all we only have classmethods here.
 
@@ -60,3 +62,56 @@ class DiodeExperiment:
             # Once again, a generator symplifies the code in pythonlab.views
             yield device.measure_input_voltage(channel=2)
         device.set_output_voltage(voltage=0)
+
+# We need to implement a I,U plot,
+# a P, U plot
+# a Maximum point power tracking mechanism
+
+Voltage_multiplier = 3
+R_small = 4.7
+value_to_voltage = 3.3 / 1023
+
+class PVExperiment(DiodeExperiment): # Inheritance for get_info and get_resources methods
+    @classmethod
+    def get_volts_and_amps(self, v0_min, v0_max, n, port=None, dt=0.03, m=3):
+        device = ArduinoVISADevice(port=port)
+        for V_0 in np.linspace(v0_min, v0_max, n):
+            device.set_output_voltage(channel=0, voltage=V_0)
+            vs = []
+            time.sleep(dt)
+            for _ in range(m):
+                v1 = device.measure_input_value(channel=1)  
+                v2 = device.measure_input_value(channel=2)
+                vs.append((v1, v2))
+                time.sleep(dt / 3)
+            # Data processing
+            vs = np.array(vs) * value_to_voltage
+            V_out = Voltage_multiplier * ufloat(np.mean(vs[:,0]), npstd(vs[:,0]))
+            I_out = ufloat(np.mean(vs[:,1]), np.std(vs[:,1])) / R_small
+            yield V_out, I_out
+        device.set_output_voltage(channel=0, voltage=0)
+
+    # A P, U plot can be created from a U,I plot, no need to reimplement the same thing.   
+
+    @classmethod
+    def get_volts_and_amps_fake(self, v0_min, v0_max, n, port=None, dt=0.03, m=3):
+        device = PreRecordedDevice(port=port)
+        for V_0 in np.linspace(v0_min, v0_max, n):
+            device.set_output_voltage(0, V_0)
+            vs = []
+            time.sleep(dt)
+            for _ in range(m):
+                v1 = float(device.get_input_value(1))
+                v2 = float(device.get_input_value(2))
+                vs.append((v1, v2))
+                time.sleep(dt / 3)
+            # Data processing
+            vs = np.array(vs) * value_to_voltage
+            V_out = Voltage_multiplier * ufloat(np.mean(vs[:,0]), np.std(vs[:,0]))
+            I_out = ufloat(np.mean(vs[:,1]), np.std(vs[:,1])) / R_small
+            yield V_out, I_out
+        device.set_output_voltage(0, 0)
+
+# x = PVExperiment()
+# for a in x.get_volts_and_amps_fake(0, 3.3, 10):
+#     print(a)

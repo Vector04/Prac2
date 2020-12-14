@@ -9,7 +9,9 @@ import pyqtgraph as pg
 import click
 import serial
 
-from pythonlab.models.models import DiodeExperiment as DE
+from pythonlab.models.models import DiodeExperiment as PE
+from pythonlab.models.models import PVExperiment as PE
+from helpers import *
 
 pg.setConfigOption("background", "w")
 pg.setConfigOption("foreground", "k")
@@ -39,10 +41,10 @@ class UserInterface(QtWidgets.QMainWindow):
             "pythonlab.views", "currentplotter.ui"), self)
 
         # Resources, following line takes long time:
-        self.resource_select.addItems(DE.get_resources(''))
+        # self.resource_select.addItems(PE.get_resources(''))
         # Some alternative hardcoding for testing purposes may be desirable:
-        # resources = ['ASRLCOM3::INSTR', 'ASRLCOM4::INSTR', 'ASRLCOM5::INSTR']
-        # self.resource_select.addItems(resources)
+        resources = ['ASRLCOM3::INSTR', 'ASRLCOM4::INSTR', 'ASRLCOM5::INSTR']
+        self.resource_select.addItems(resources)
 
         # Identification
         self.identification_button.clicked.connect(self.get_identification)
@@ -67,15 +69,23 @@ class UserInterface(QtWidgets.QMainWindow):
         self.measure_button.clicked.connect(self.start_measurement)
         self.plot_timer = QtCore.QTimer()
         self.is_plotting = False
-        self.plotting_options = {"pen": {"color": "g","width": 3}}
+        self.plotting_options1 = {"pen": {"color": "g", "width": 3}}
+        self.plotting_options2 = {"pen": {"color": "r", "width": 3}}
 
         # Plot labels
-        self.plotwidget.setLabel("left", "V out (V)")
+        self.plotwidget.setLabel("left", "V1, V2 (V)")
         self.plotwidget.setLabel("bottom", "V in (V)")
+        self.plotwidget2.setLabel("left", "I out (A)")
+        self.plotwidget2.setLabel("bottom", "V out (V)")
+        self.plotwidget.addLegend()
 
         # Saving mechanism
         self.browsebutton.clicked.connect(self.file_select)
         self.savebutton.clicked.connect(self.save_data)
+
+        # Fit phase diagram
+        self.startfit_button.clicked.connect(self.add_fit)
+        self.fitresults_linedit.setReadOnly(True)
 
     def set_device(self):
         """Sets default resource (port), displays it"""
@@ -90,7 +100,7 @@ class UserInterface(QtWidgets.QMainWindow):
         logging.debug(f"Getting Identification for {resource}.")
 
         # Unfortunately, this is very slow
-        info = DE.get_info(resource)
+        info = PE.get_info(resource)
 
         if info:
             self.identification_line_edit.setText(info)
@@ -176,7 +186,7 @@ class UserInterface(QtWidgets.QMainWindow):
         self.is_plotting = False
         logging.info(f"Finished data scan.")
 
-    def _plot(self, ys, dys):
+    def _plot(self, Vs, dVs, Is, dIs):
         """Plots the given data on plotwidget instance.
         Arguments:
             `ys': list, the data to plot. 
@@ -184,41 +194,59 @@ class UserInterface(QtWidgets.QMainWindow):
         """
         logging.debug("_plot() activated.")
         self.plotwidget.clear()
-        self.plotwidget.plot(self.xs[:len(ys)], ys, **self.plotting_options)
+        self.plotwidget2.clear()
+        self.plotwidget.plot(self.xs[:len(Vs)], Vs, **self.plotting_options1, name="Channel 1")
+        self.plotwidget.plot(self.xs[:len(Is)], Is, **self.plotting_options2, name="Channel 2")
         errorbars = pg.ErrorBarItem(
-            x=self.xs[:len(ys)],
-            y=ys,
-            width=2 * np.array(dys),
-            height=2 * np.array(dys))
-        self.plotwidget.addItem(errorbars)
+            x=np.array(Vs),
+            y=np.array(Is),
+            width=np.array(dVs) * 2,
+            height=np.array(dIs) * 2)
 
-    def copy_ys(self, ys, dys):
+        self.plotwidget2.addItem(errorbars)
+
+    def copy_ys(self, Vs, dVs, Is, dIs):
         """Copies data from DataCollectionThread to Userinterface.ys attribute.
         Arguments:
             `ys': list, the data to be copied. 
         """
-        self.ys = ys
+        self.Vs = Vs
+        self.dVs = dVs
+        self.Is = Is
+        self.dIs = dIs
+
+    def add_fit(self):
+        try:
+            self.Vs
+        except AttributeError:
+            return
+        fit_report, (fit_Vs, fit_Is) = fit_phase_diagram(self.Vs, self.dVs, self.Is, self.dIs)
+        self.fitresults_linedit.setText(fit_report)
+        self.plotwidget2.plot(fit_Vs, fit_Is, **self.plotting_options1)
 
 
 class DataCollectionThread(QtCore.QThread):
-    ys_signal = QtCore.pyqtSignal(list, list)
+    ys_signal = QtCore.pyqtSignal(list, list, list, list)
 
     def __init__(self, *args, **kwargs):
         QtCore.QThread.__init__(self)
         self.args = args
         self.kwargs = kwargs
-        self.ys = []
-        self.dys = []
+        self.Vs, self.dVs = [], []
+        self.Is, self.dIs = [], []
+        
 
     def __del__(self):
         self.wait()
 
     def run(self):
         try:
-            for V_out in DE.get_voltages(*self.args, **self.kwargs):
-                self.ys.append(V_out)
-                self.dys.append(0.0033)
-                self.ys_signal.emit(self.ys, self.dys)
+            for V_out, I_out in PE.get_volts_and_amps_fake(*self.args, **self.kwargs):
+                self.Vs.append(V_out.n)
+                self.dVs.append(V_out.s)
+                self.Is.append(I_out.n)
+                self.dIs.append(I_out.s)
+                self.ys_signal.emit(self.Vs, self.dVs, self.Is, self.dIs)
                 logging.debug(f"New datapoint [{V_out}] added.")
         except serial.serialutil.SerialException:
             logging.error(f"Cannot measure any data on port {self.kwargs['port']}.")
