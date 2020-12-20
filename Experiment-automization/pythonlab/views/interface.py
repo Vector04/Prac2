@@ -9,10 +9,11 @@ from PyQt5 import QtWidgets, uic, QtCore
 import pyqtgraph as pg
 import click
 import serial
+from uncertainties import ufloat, unumpy
 
 from pythonlab.models.models import DiodeExperiment as PE
 from pythonlab.models.models import PVExperiment as PE
-from helpers import *
+from pythonlab.views.helpers import *
 
 pg.setConfigOption("background", "w")
 pg.setConfigOption("foreground", "k")
@@ -74,12 +75,17 @@ class UserInterface(QtWidgets.QMainWindow):
         self.plotting_options11 = {"pen": {"color": "g", "width": 2}}
         self.plotting_options2 = {"pen": {"color": "r", "width": 3}}
         self.plotting_options21 = {"pen": {"color": "r", "width": 2}}
+        self.plotting_options3 = {"pen": {"color": "#2a78f5", "width": 2}}
 
         # Plot labels
         self.plotwidget.setLabel("left", "V out (V), I out (A)")
         self.plotwidget.setLabel("bottom", "V in (V)")
         self.plotwidget2.setLabel("left", "I out (A)")
         self.plotwidget2.setLabel("bottom", "V out (V)")
+        self.plotwidget3.setLabel("left", "P out (W)")
+        self.plotwidget3.setLabel("bottom", "V out (V)")
+        self.plotwidget4.setLabel("left", "P out (W)")
+        self.plotwidget4.setLabel("bottom", "R out (Ω)")
         self.plotwidget.addLegend()
 
         # Saving mechanism
@@ -188,38 +194,47 @@ class UserInterface(QtWidgets.QMainWindow):
         self.is_plotting = False
         logging.info(f"Finished data scan.")
 
+    @staticmethod
+    def _make_errorbaritem(xs, ys, **kwargs):
+        """Returns and Pg.Errorbaritem, made from xs(uarray) and ys (uarray). Can also pass in plotting options."""
+        return pg.ErrorBarItem(x=unumpy.nominal_values(xs), y=unumpy.nominal_values(ys),
+            width=unumpy.std_devs(xs) * 2, height=unumpy.std_devs(ys) * 2, **kwargs)
+
     def _plot(self, Vs, dVs, Is, dIs):
         """Plots the given data on plotwidget instance.
         Arguments:
-            `ys': list, the data to plot. 
-            `dys': list, the uncertainties over the measurement.
+            `Vs': list, Voltage.
+            `dVs': list, uncertainty of voltage.
+            `Is': list, current.
+            `dIs': list, uncertainty of current.
         """
         logging.debug("_plot() activated.")
         self.plotwidget.clear()
         self.plotwidget2.clear()
+        self.plotwidget3.clear()
+        self.plotwidget4.clear()
+        
         self.plotwidget.plot(self.xs[:len(Vs)], Vs, **self.plotting_options1, name="V out (V)")
         self.plotwidget.plot(self.xs[:len(Is)], Is, **self.plotting_options2, name="I out (A)")
 
-        errorbars1 = pg.ErrorBarItem(x=self.xs[:len(Vs)], y=np.array(Vs),
-                        height=np.array(dVs) * 2, **self.plotting_options11)
-        errorbars2 = pg.ErrorBarItem(x=self.xs[:len(Is)], y=np.array(Is),
-                        height=np.array(dIs) * 2, **self.plotting_options21)
+        Vs = unumpy.uarray(Vs, dVs)
+        Is = unumpy.uarray(Is, dIs)
+        Ps = Vs * Is
+        Rs = Vs / Is
 
-        # self.plotwidget.plot(self.xs[:len(Vs)], np.array(Vs) * np.array(Is) * 3 / 4.3, name="Powerrr")
-        errorbars3 = pg.ErrorBarItem(
-            x=np.array(Vs),
-            y=np.array(Is),
-            width=np.array(dVs) * 2,
-            height=np.array(dIs) * 2)
-
-        self.plotwidget.addItem(errorbars1)
-        self.plotwidget.addItem(errorbars2)
-        self.plotwidget2.addItem(errorbars3)
+        self.plotwidget.addItem(self._make_errorbaritem(self.xs[:len(Vs)], Vs, **self.plotting_options11))
+        self.plotwidget.addItem(self._make_errorbaritem(self.xs[:len(Vs)], Is, **self.plotting_options21))
+        self.plotwidget2.addItem(self._make_errorbaritem(Vs, Is, **self.plotting_options3))
+        self.plotwidget3.addItem(self._make_errorbaritem(Vs, Ps, **self.plotting_options3))
+        self.plotwidget4.addItem(self._make_errorbaritem(Rs, Ps, **self.plotting_options3))
 
     def copy_ys(self, Vs, dVs, Is, dIs):
-        """Copies data from DataCollectionThread to Userinterface.ys attribute.
+        """Copies data from DataCollectionThread to self.ys attribute.
         Arguments:
-            `ys': list, the data to be copied. 
+            `Vs': list, Voltage.
+            `dVs': list, uncertainty of voltage.
+            `Is': list, current.
+            `dIs': list, uncertainty of current.
         """
         self.Vs = Vs
         self.dVs = dVs
@@ -227,20 +242,18 @@ class UserInterface(QtWidgets.QMainWindow):
         self.dIs = dIs
 
     def add_fit(self):
+        """Adds fit for U-I plot. Evokes helpers.fit_phase_diagram()."""
         try:
             self.Vs
         except AttributeError:
             return
-        t1 = time.time()
         fit_report, (fit_Vs, fit_Is) = fit_phase_diagram(self.Vs, self.dVs, self.Is, self.dIs)
-        t2 = time.time()
-        delta_t = (t2 - t1)  * 1000  # ms
-        print(f"Fitting time: {delta_t} ms.")
         self.fitresults_linedit.setText(fit_report)
         self.plotwidget2.plot(fit_Vs, fit_Is, **self.plotting_options1)
 
 
 class DataCollectionThread(QtCore.QThread):
+    """QThread subclass to collect data asynchonously"""
     ys_signal = QtCore.pyqtSignal(list, list, list, list)
 
     def __init__(self, *args, **kwargs):
@@ -256,6 +269,7 @@ class DataCollectionThread(QtCore.QThread):
         self.wait()
 
     def run(self):
+        """Collects Data."""
         try:
             for V_out, I_out in self.PE.get_volts_and_amps(*self.args, **self.kwargs):
                 self.Vs.append(V_out.n)

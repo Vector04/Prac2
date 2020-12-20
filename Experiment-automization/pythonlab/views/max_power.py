@@ -9,10 +9,11 @@ import pkg_resources
 from PyQt5 import QtWidgets, uic, QtCore
 import pyqtgraph as pg
 import click
-import serial
+
 
 from pythonlab.models.models import PVExperiment as PE
-from helpers import *
+from pythonlab.views.helpers import *
+
 
 
 for logger in logging.Logger.manager.loggerDict:
@@ -26,7 +27,10 @@ pg.setConfigOption("foreground", "k")
 class UserInterface(QtWidgets.QMainWindow):
     """Controls functionality of our QApplication. implements logic that enables the features of the user interface.
         Features are:
-            none
+            - Port scanning and selection
+            - Port verification
+            - Power display and tracking
+            - Resistance display and tracking
     """
 
     def __init__(self):
@@ -57,17 +61,21 @@ class UserInterface(QtWidgets.QMainWindow):
         self.plotwidget.setLabel("bottom", "time (s)")
         self.plotwidget.setYRange(min=0, max=0.2)
 
+        self.plotwidget2.setLabel("left", "Resistance (Ω)")
+        self.plotwidget2.setLabel("bottom", "time (s)")
+        self.plotwidget2.setYRange(min=0, max=2e3)
+
         # Start power tracking
         self.measure_button.clicked.connect(self.start_measurement)
 
-        self.queue = Queue(20)
+        self.queue_P = Queue(20)
+        self.queue_R = Queue(20)
         self.power_timer = QtCore.QTimer()
         self.power_timer.timeout.connect(self.collect_measurements)
         self.power_freq = 500
 
         self.power_max_timer = QtCore.QTimer()
-        
-        self.power_max_freq = 10000
+        self.power_max_freq = 5000
 
         self.plotting_options = {"pen": {"color": "r", "width": 3}}
         self.plotting_options2 = {"pen": {"color": "r", "width": 2}}
@@ -81,6 +89,8 @@ class UserInterface(QtWidgets.QMainWindow):
             self.resource = self.resource_select.currentText()
             self.selected_device_line_edit.setText(self.resource)
             logging.info(f"Device {self.resource} set.")
+            self.queue_P = Queue(20)
+            self.queue_R = Queue(20)
 
     def get_identification(self):
         """Gets the identification string of device, and displays it."""
@@ -100,33 +110,50 @@ class UserInterface(QtWidgets.QMainWindow):
 
 
     def collect_measurements(self):
-        power = self.PE.get_power()
-   
-        self.queue.add(power)
+        """Calls the PE.get_power function to track the power output. Saves data to self.queue_P and slef.queue_R. """
+        V, I  = self.PE.get_power(return_more=True)
+        # In case I = 0
+        try:
+            power, resistance = V * I, V / I
+        except ZeroDivisionError:
+            power, resistance = ufloat(0, 0), ufloat(0,0)
+
+        # Save and display data
+        self.queue_P.add(power)
+        self.queue_R.add(resistance)
         self.powerdisplay.setText(f"{power.n:.4f} \u00B1 {power.s:.4f} W")
+        self.resistancedisplay.setText(f"{str(int(resistance.n)).rjust(4)} \u00B1 {str(int(resistance.s)).rjust(4)} Ω")
         self.plot()
 
     def plot(self):
-        xs = (np.arange(0, len(self.queue), 1) - len(self.queue)) * (self.power_freq / 1000) 
+        """Plots the power output and resistance of PV Device."""
+        # Power
+        xs = (np.arange(0, len(self.queue_P), 1) - len(self.queue_R)) * (self.power_freq / 1000) 
         self.plotwidget.clear()
-        self.plotwidget.plot(xs, [x.n for x in self.queue.to_array()], **self.plotting_options)
-
+        self.plotwidget.plot(xs, [x.n for x in self.queue_P.to_array()], **self.plotting_options)
         errorbars = pg.ErrorBarItem(
-            x=xs,
-            y=np.array([x.n for x in self.queue.to_array()]),
-            height=np.array([x.s for x in self.queue.to_array()]) * 2, **self.plotting_options2)
+            x=xs, y=np.array([x.n for x in self.queue_P.to_array()]),
+            height=np.array([x.s for x in self.queue_P.to_array()]) * 2, **self.plotting_options2)
         self.plotwidget.addItem(errorbars)
+        self.plotwidget.setYRange(min=0, max=max(0.2, max([x.n for x in self.queue_P.to_array()])))
+        
+        # Resistance
+        self.plotwidget2.clear()
+        self.plotwidget2.plot(xs, [x.n for x in self.queue_R.to_array()], **self.plotting_options)
+        errorbars = pg.ErrorBarItem(
+            x=xs, y=np.array([x.n for x in self.queue_R.to_array()]),
+            height=np.array([x.s for x in self.queue_R.to_array()]) * 2, **self.plotting_options2)
+        self.plotwidget2.addItem(errorbars)
+        self.plotwidget2.setYRange(min=0, max=max(2e3, 1.1*max([x.n + x.s for x in self.queue_R.to_array()])))
+
 
     def start_measurement(self):
-        """Evokes pythonlab.models module to measure data over specified range, plots data was well. Has spam protection."""
+        """Starts the live measurments. Can be evoked a 2nd time to stop the live measurement."""
         if not self.measuring:
             self.PE = PE(port=self.resource)
-            self.queue = Queue(20)
             self.power_timer.start(self.power_freq)
             self.power_max_timer.timeout.connect(self.PE.max_power)
             self.power_max_timer.start(self.power_max_freq)
-            self.collect_measurements()
-            self.PE.max_power()
             self.measure_button.setText("Stop")
             self.measure_label.setText("Stop power tracking")
             self.measuring = True

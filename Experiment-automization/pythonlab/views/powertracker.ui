@@ -18,7 +18,7 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>901</width>
+     <width>1351</width>
      <height>521</height>
     </rect>
    </property>
@@ -160,59 +160,84 @@
        </layout>
       </item>
       <item>
-       <spacer name="verticalSpacer_5">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
+       <widget class="Line" name="line_3">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
-        <property name="sizeType">
-         <enum>QSizePolicy::Fixed</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
+        <property name="minimumSize">
          <size>
-          <width>20</width>
-          <height>40</height>
+          <width>0</width>
+          <height>60</height>
          </size>
         </property>
-       </spacer>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_5">
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <widget class="QLabel" name="powerlabel">
-          <property name="font">
-           <font>
-            <pointsize>16</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Current Power:</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="powerdisplay">
-          <property name="font">
-           <font>
-            <pointsize>16</pointsize>
-           </font>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer">
+         <spacer name="horizontalSpacer_2">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
-          <property name="sizeType">
-           <enum>QSizePolicy::Expanding</enum>
-          </property>
           <property name="sizeHint" stdset="0">
            <size>
-            <width>40</width>
+            <width>60</width>
             <height>20</height>
            </size>
           </property>
          </spacer>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="gridLayout">
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="powerdisplay">
+            <property name="font">
+             <font>
+              <pointsize>16</pointsize>
+             </font>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="powerlabel">
+            <property name="font">
+             <font>
+              <pointsize>16</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Power</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="resistancelabel">
+            <property name="font">
+             <font>
+              <pointsize>16</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Resistance</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="resistancedisplay">
+            <property name="font">
+             <font>
+              <pointsize>16</pointsize>
+             </font>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>
@@ -244,9 +269,6 @@
     <item>
      <layout class="QVBoxLayout" name="Plot_vbox">
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_4"/>
-      </item>
-      <item>
        <widget class="QLabel" name="scanlabel">
         <property name="font">
          <font>
@@ -260,6 +282,25 @@
       </item>
       <item>
        <widget class="PlotWidget" name="plotwidget"/>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QVBoxLayout" name="Plot_vbox_2">
+      <item>
+       <widget class="QLabel" name="scanlabel_2">
+        <property name="font">
+         <font>
+          <pointsize>20</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Resistance Tracking</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="PlotWidget" name="plotwidget2"/>
       </item>
      </layout>
     </item>

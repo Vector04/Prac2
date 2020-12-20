@@ -47,7 +47,7 @@ def formatter(val, error):
 
 
 def fit_phase_diagram(Vs, dVs, Is, dIs):
-
+    """Fits the Give V and I data. Returns a fit report, max power voltage and fitted Vs and Is."""
     dIs = np.array(dIs)
     dIs[dIs == 0] = 1
 

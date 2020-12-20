@@ -1,5 +1,6 @@
 [console_scripts]
 diode = pythonlab.views.views:cli
 interface = pythonlab.views.interface:cli
+power = pythonlab.views.max_power:cli
 test_app = ch4.smallangle:cli
 

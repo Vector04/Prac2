@@ -18,7 +18,7 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>1301</width>
+     <width>1471</width>
      <height>521</height>
     </rect>
    </property>
@@ -342,7 +342,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Phase Diagram</string>
+         <string>(I, U) Diagram</string>
         </property>
        </widget>
       </item>
@@ -408,6 +408,40 @@
          </widget>
         </item>
        </layout>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="QLabel" name="PULabel">
+        <property name="font">
+         <font>
+          <pointsize>20</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>(P, U) Diagram</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="PlotWidget" name="plotwidget3"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="PRLabel">
+        <property name="font">
+         <font>
+          <pointsize>20</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>(P, R) Diagram</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="PlotWidget" name="plotwidget4"/>
       </item>
      </layout>
     </item>
