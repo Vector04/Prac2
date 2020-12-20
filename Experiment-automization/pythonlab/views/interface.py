@@ -1,5 +1,6 @@
 import sys
 import logging
+import time
 
 import numpy as np
 import pandas as pd
@@ -41,9 +42,9 @@ class UserInterface(QtWidgets.QMainWindow):
             "pythonlab.views", "currentplotter.ui"), self)
 
         # Resources, following line takes long time:
-        # self.resource_select.addItems(PE.get_resources(''))
+        # self.resource_select.addItems(PE.get_resources('') + ['Pre-recorded'])
         # Some alternative hardcoding for testing purposes may be desirable:
-        resources = ['ASRLCOM3::INSTR', 'ASRLCOM4::INSTR', 'ASRLCOM5::INSTR']
+        resources = ['ASRLCOM3::INSTR', 'ASRLCOM4::INSTR', 'ASRLCOM5::INSTR', 'Pre-recorded']
         self.resource_select.addItems(resources)
 
         # Identification
@@ -70,10 +71,12 @@ class UserInterface(QtWidgets.QMainWindow):
         self.plot_timer = QtCore.QTimer()
         self.is_plotting = False
         self.plotting_options1 = {"pen": {"color": "g", "width": 3}}
+        self.plotting_options11 = {"pen": {"color": "g", "width": 2}}
         self.plotting_options2 = {"pen": {"color": "r", "width": 3}}
+        self.plotting_options21 = {"pen": {"color": "r", "width": 2}}
 
         # Plot labels
-        self.plotwidget.setLabel("left", "V1, V2 (V)")
+        self.plotwidget.setLabel("left", "V out (V), I out (A)")
         self.plotwidget.setLabel("bottom", "V in (V)")
         self.plotwidget2.setLabel("left", "I out (A)")
         self.plotwidget2.setLabel("bottom", "V out (V)")
@@ -123,7 +126,8 @@ class UserInterface(QtWidgets.QMainWindow):
     def save_data(self):
         """Saves measured data to csv. If there is no data, no file is saved."""
         try:
-            df = pd.DataFrame({"v_in": self.xs, "v_out": self.ys})
+            df = pd.DataFrame({"v_in": self.xs, "V_out": self.Vs, 
+                            "dV_out": self.dVs, "I_out": self.Is, "dI_out": self.dIs})
         except AttributeError:
             # There is no data to be saved
             logging.debug("There is no data to be saved.")
@@ -154,10 +158,8 @@ class UserInterface(QtWidgets.QMainWindow):
         end = self.endslider.value() / 100
         numpoints = self.numpointsslider.value()
         args = (start, end, numpoints)
-        # Simplifies plotting function
+        # Simplifies saving function
         self.xs = np.linspace(*args)
-        # Copy of data, useful when saving data
-        self.ys = []
 
         self.measure_button.setEnabled(False)
         self.plotwidget.clear()
@@ -195,15 +197,24 @@ class UserInterface(QtWidgets.QMainWindow):
         logging.debug("_plot() activated.")
         self.plotwidget.clear()
         self.plotwidget2.clear()
-        self.plotwidget.plot(self.xs[:len(Vs)], Vs, **self.plotting_options1, name="Channel 1")
-        self.plotwidget.plot(self.xs[:len(Is)], Is, **self.plotting_options2, name="Channel 2")
-        errorbars = pg.ErrorBarItem(
+        self.plotwidget.plot(self.xs[:len(Vs)], Vs, **self.plotting_options1, name="V out (V)")
+        self.plotwidget.plot(self.xs[:len(Is)], Is, **self.plotting_options2, name="I out (A)")
+
+        errorbars1 = pg.ErrorBarItem(x=self.xs[:len(Vs)], y=np.array(Vs),
+                        height=np.array(dVs) * 2, **self.plotting_options11)
+        errorbars2 = pg.ErrorBarItem(x=self.xs[:len(Is)], y=np.array(Is),
+                        height=np.array(dIs) * 2, **self.plotting_options21)
+
+        # self.plotwidget.plot(self.xs[:len(Vs)], np.array(Vs) * np.array(Is) * 3 / 4.3, name="Powerrr")
+        errorbars3 = pg.ErrorBarItem(
             x=np.array(Vs),
             y=np.array(Is),
             width=np.array(dVs) * 2,
             height=np.array(dIs) * 2)
 
-        self.plotwidget2.addItem(errorbars)
+        self.plotwidget.addItem(errorbars1)
+        self.plotwidget.addItem(errorbars2)
+        self.plotwidget2.addItem(errorbars3)
 
     def copy_ys(self, Vs, dVs, Is, dIs):
         """Copies data from DataCollectionThread to Userinterface.ys attribute.
@@ -220,7 +231,11 @@ class UserInterface(QtWidgets.QMainWindow):
             self.Vs
         except AttributeError:
             return
+        t1 = time.time()
         fit_report, (fit_Vs, fit_Is) = fit_phase_diagram(self.Vs, self.dVs, self.Is, self.dIs)
+        t2 = time.time()
+        delta_t = (t2 - t1)  * 1000  # ms
+        print(f"Fitting time: {delta_t} ms.")
         self.fitresults_linedit.setText(fit_report)
         self.plotwidget2.plot(fit_Vs, fit_Is, **self.plotting_options1)
 
@@ -234,6 +249,7 @@ class DataCollectionThread(QtCore.QThread):
         self.kwargs = kwargs
         self.Vs, self.dVs = [], []
         self.Is, self.dIs = [], []
+        self.PE = PE(**self.kwargs)
         
 
     def __del__(self):
@@ -241,7 +257,7 @@ class DataCollectionThread(QtCore.QThread):
 
     def run(self):
         try:
-            for V_out, I_out in PE.get_volts_and_amps_fake(*self.args, **self.kwargs):
+            for V_out, I_out in self.PE.get_volts_and_amps(*self.args, **self.kwargs):
                 self.Vs.append(V_out.n)
                 self.dVs.append(V_out.s)
                 self.Is.append(I_out.n)

@@ -17,6 +17,7 @@ pythonlab/views/__init__.py
 pythonlab/views/helpers.py
 pythonlab/views/interface.py
 pythonlab/views/interface_backup.py
+pythonlab/views/max_power.py
 pythonlab/views/plotter.py
 pythonlab/views/plotter.ui
 pythonlab/views/views.py
